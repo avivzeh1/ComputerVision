@@ -89,18 +89,18 @@
 
 # DataFlair Invisible Cloak project using OpenCV.
 import threading
-
-import face_recognition
 import mediapipe as mp
 import cv2
 import time
 import numpy as np
 from simple_facerec import SimpleFacerec
 
+
 inp = input("Do you want to process live video or a record?\nType 1 for live and 2 for a record: ")
 
 while True:
     if inp == '1':
+        input('Please confirm that you are ready to show the background for a few seconds')
         cap = cv2.VideoCapture(0)
         break
     elif inp == '2':
@@ -110,12 +110,12 @@ while True:
             raise 'Error opening video file. Please check file path...'
     inp = input('Type 1 for live and 2 for a record: ')
 
-input('Please confirm that you are ready to show the background for a few seconds')
-
-# Store a single frame as background
 _, background = cap.read()
 time.sleep(2)
 _, background = cap.read()
+
+
+
 
 # define all the kernels size
 open_kernel = np.ones((5, 5), np.uint8)
@@ -177,20 +177,6 @@ while True:
     if cv2.waitKey(1) == ord('q'):
         break
 
-img = cv2.imread("Messi1.webp")
-rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-img_encoding = face_recognition.face_encodings(rgb_img)[0]
-
-img2 = cv2.imread("images/Messi.webp")
-rgb_img2 = cv2.cvtColor(img2, cv2.COLOR_BGR2RGB)
-img_encoding2 = face_recognition.face_encodings(rgb_img2)[0]
-
-result = face_recognition.compare_faces([img_encoding], img_encoding2)
-print("Result: ", result)
-
-cv2.imshow("Img", img)
-cv2.imshow("Img 2", img2)
-cv2.waitKey(0)
 
 cap.release()
 cv2.destroyAllWindows()
