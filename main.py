@@ -1,120 +1,27 @@
-# import cv2
-# import numpy as np
-# import time
-#
-# # replace the red pixels ( or undesired area ) with
-# # background pixels to generate the invisibility feature.
-#
-# ## 1. Hue: This channel encodes color information. Hue can be
-# # thought of an angle where 0 degree corresponds to the red color,
-# # 120 degrees corresponds to the green color, and 240 degrees
-# # corresponds to the blue color.
-#
-# ## 2. Saturation: This channel encodes the intensity/purity of color.
-# # For example, pink is less saturated than red.
-#
-# ## 3. Value: This channel encodes the brightness of color.
-# # Shading and gloss components of an image appear in this
-# # channel reading the videocapture video
-#
-# # in order to check the cv2 version
-# print(cv2.__version__)
-#
-# # taking video.mp4 as input.
-# # Make your path according to your needs
-# capture_video = cv2.VideoCapture(0)
-#
-# # give the camera to warm up
-# time.sleep(1)
-# count = 0
-# background = 0
-#
-# # capturing the background in range of 60
-# # you should have video that have some seconds
-# # dedicated to background frame so that it
-# # could easily save the background image
-# for i in range(60):
-#     return_val, background = capture_video.read()
-#     if return_val == False:
-#         continue
-#
-# background = np.flip(background, axis=1)  # flipping of the frame
-#
-# # we are reading from video
-# while (capture_video.isOpened()):
-#     return_val, img = capture_video.read()
-#     if not return_val:
-#         break
-#     count = count + 1
-#     img = np.flip(img, axis=1)
-#
-#     # convert the image - BGR to HSV
-#     # as we focused on detection of red color
-#
-#     # converting BGR to HSV for better
-#     # detection or you can convert it to gray
-#     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-#
-#     # -------------------------------------BLOCK----------------------------#
-#     # ranges should be carefully chosen
-#     # setting the lower and upper range for mask1
-#     lower_red = np.array([202, 0, 0])
-#     upper_red = np.array([100, 255, 255])
-#     mask1 = cv2.inRange(hsv, lower_red, upper_red)
-#     # setting the lower and upper range for mask2
-#     lower_red = np.array([170, 120, 70])
-#     upper_red = np.array([180, 255, 255])
-#     mask2 = cv2.inRange(hsv, lower_red, upper_red)
-#     # ----------------------------------------------------------------------#
-#
-#     # the above block of code could be replaced with
-#     # some other code depending upon the color of your cloth
-#     mask1 = mask1 + mask2
-#
-#     # Refining the mask corresponding to the detected red color
-#     mask1 = cv2.morphologyEx(mask1, cv2.MORPH_OPEN, np.ones((3, 3),
-#                                                             np.uint8), iterations=2)
-#     mask1 = cv2.dilate(mask1, np.ones((3, 3), np.uint8), iterations=1)
-#     mask2 = cv2.bitwise_not(mask1)
-#
-#     # Generating the final output
-#     res1 = cv2.bitwise_and(background, background, mask=mask1)
-#     res2 = cv2.bitwise_and(img, img, mask=mask2)
-#     final_output = cv2.addWeighted(res1, 1, res2, 1, 0)
-#
-#     cv2.imshow("INVISIBLE MAN", final_output)
-#     k = cv2.waitKey(10)
-#     if k == 27:
-#         break
-
-# DataFlair Invisible Cloak project using OpenCV.
-import threading
-import mediapipe as mp
 import cv2
 import time
 import numpy as np
 from simple_facerec import SimpleFacerec
 
+# inp = input("Do you want to process live video or a record?\nType 1 for live and 2 for a record: ")
+#
+# while True:
+#     if inp == '1':
+#         input('Please confirm that you are ready to show the background for a few seconds')
+#         cap = cv2.VideoCapture(0)
+#         break
+#     elif inp == '2':
+#         filename = input('Please enter the record name: ')
+#         cap = cv2.VideoCapture(filename)
+#         if cap.isOpened() == False:
+#             raise 'Error opening video file. Please check file path...'
+#     inp = input('Type 1 for live and 2 for a record: ')
 
-inp = input("Do you want to process live video or a record?\nType 1 for live and 2 for a record: ")
-
-while True:
-    if inp == '1':
-        input('Please confirm that you are ready to show the background for a few seconds')
-        cap = cv2.VideoCapture(0)
-        break
-    elif inp == '2':
-        filename = input('Please enter the record name: ')
-        cap = cv2.VideoCapture(filename)
-        if cap.isOpened() == False:
-            raise 'Error opening video file. Please check file path...'
-    inp = input('Type 1 for live and 2 for a record: ')
-
+cap = cv2.VideoCapture(0)
+print('please show the background now')
 _, background = cap.read()
-time.sleep(2)
+time.sleep(4)
 _, background = cap.read()
-
-
 
 
 # define all the kernels size
@@ -123,8 +30,9 @@ close_kernel = np.ones((7, 7), np.uint8)
 dilation_kernel = np.ones((10, 10), np.uint8)
 
 sfr = SimpleFacerec()
-sfr.load_encoding_images("images/")
-
+print('Loading images from database...')
+#sfr.save_encoding_images("images/")  #run only once
+sfr.load_data()
 
 # Function for remove noise from mask
 def filter_mask(mask):
@@ -176,7 +84,6 @@ while True:
 
     if cv2.waitKey(1) == ord('q'):
         break
-
 
 cap.release()
 cv2.destroyAllWindows()

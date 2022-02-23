@@ -8,7 +8,10 @@ class WebcamVideoStream:
         # initialize the video camera stream and read the first frame
         # from the stream
         self.stream = cv2.VideoCapture(src)
+        cv2.namedWindow("preview", cv2.WINDOW_NORMAL)
+
         (self.grabbed, self.frame) = self.stream.read()
+
         # initialize the variable used to indicate if the thread should
         # be stopped
         self.stopped = False
