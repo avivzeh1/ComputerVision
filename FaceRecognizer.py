@@ -1,19 +1,13 @@
 import glob
 import os
-import threading
-from threading import Thread
-
 import cv2
 import face_recognition
 import mediapipe as mp
 import time
 import numpy as np
-from simple_facerec import SimpleFacerec
 
-
-class FaceDetector():
+class FaceReconizer():
     def __init__(self, minDetectionCon=0.5):
-
         self.minDetectionCon = minDetectionCon
         self.mpFaceDetection = mp.solutions.face_detection
         self.mpDraw = mp.solutions.drawing_utils
@@ -24,6 +18,8 @@ class FaceDetector():
         self.numOfFaces = 0
         self.tolerance = 0.6
         self.frame_resizing = 0.3
+        self.t = time.time()
+        self.face_locations = []
 
     def load_data(self):
         """
@@ -73,7 +69,7 @@ class FaceDetector():
 
         print("Encoding images loaded")
 
-    def findFaces(self, img, draw=True):
+    def findFaces(self, img):
 
         imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         self.results = self.faceDetection.process(imgRGB)
@@ -83,48 +79,91 @@ class FaceDetector():
         if self.results.detections:
             for id, detection in enumerate(self.results.detections):
                 print(self.numOfFaces)
-                print(id)
                 bboxC = detection.location_data.relative_bounding_box
                 ih, iw, ic = img.shape
                 bbox = int(bboxC.xmin * iw), int(bboxC.ymin * ih), int(bboxC.width * iw), int(bboxC.height * ih)
                 x, y, w, h = bbox
                 x1, y1 = x + w, y + h
 
-                if draw:
-                    img = self.fancyDraw(img, bbox)
+                img = self.fancyDraw(img, bbox)
+                bboxs.append([y, x1, y1, x])
 
-                    # if self.numOfFaces != len(list(self.results.detections)) or len(self.recognized) != self.numOfFaces:
-                       # self.recognizeFaces(img)
-                    self.numOfFaces = len(list(self.results.detections))
-                    name = self.recognizeFaces(img, [(int(x*self.frame_resizing), int(y1*self.frame_resizing), int(x1*self.frame_resizing), int(y*self.frame_resizing))])
-                    # else:
-                    #     name = self.recognized[cnt]
-                    if cnt < len(self.recognized):
-                        print(len(self.recognized))
-                        cv2.putText(img, f'{name} {int(detection.score[0] * 100)}%',
-                                    (bbox[0], bbox[1] - 20), cv2.FONT_HERSHEY_PLAIN,
-                                    2, (255, 0, 255), 2)
-                        cnt += 1
+
+            if self.needToRecognizeAgain(self.sort_locations(self.face_locations), self.sort_locations(bboxs)):
+                self.recognizeFaces(img)
+
+            for bbox in bboxs:
+                name = self.findName(bbox)
+                print(name)
+                print(self.recognized)
+                cv2.putText(img, f'{name} {int(detection.score[0] * 100)}%',
+                            (bbox[1], bbox[2] - 10), cv2.FONT_HERSHEY_PLAIN,
+                            2, (255, 0, 255), 2)
+
         return img, bboxs
 
-    def recognizeFaces(self, img, face_location):
+    def findName(self, bbox):
+        print('findname', bbox)
+        if len(self.recognized) == 0 or len(self.face_locations) == 0:
+            return ""
+        distances = []
+        for v in self.face_locations:
+            distances.append(np.linalg.norm(v - bbox))
+
+        print('finName' , min(distances))
+        if min(distances) > 200:
+            return 'Unknown'
+        return self.recognized[np.argmin(distances)]
+
+    def sort_locations(self, locations):
+        sizes = []
+        for loc in locations:
+            sum = np.square(loc[0]) + np.square(loc[1]) + np.square(loc[2]) + np.square(loc[3])
+            size = np.sqrt(sum)
+            sizes.append((loc, size))
+
+        lst = len(sizes)
+        for i in range(0, lst):
+            for j in range(0, lst - i - 1):
+                if (sizes[j][1] > sizes[j + 1][1]):
+                    temp = sizes[j]
+                    sizes[j] = sizes[j + 1]
+                    sizes[j + 1] = temp
+        return [tup[0] for tup in sizes]
+
+    def needToRecognizeAgain(self, V, B):
+        print(V)
+        print(B)
+
+        if len(V) == 0:
+            return True
+        dist = -1
+        for v, b in zip(V, B):
+            dist = np.linalg.norm(v - b)
+            if dist > 200:
+                print('needToRecognizeAgain', dist)
+                return True
+        print('needToRecognizeAgain', dist)
+        return False
+
+    def recognizeFaces(self, img):
         small_frame = cv2.resize(img, (0, 0), fx=self.frame_resizing, fy=self.frame_resizing)
         # Find all the faces and face encodings in the current frame of video
         # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
         rgb_frame = cv2.cvtColor(small_frame, cv2.COLOR_BGR2RGB)
-        # face_locations = face_recognition.face_locations(rgb_small_frame)
+        face_locations = face_recognition.face_locations(rgb_frame)
+
         # if self.numOfFaces == len(face_locations):
         #     return self.recognized
         # self.recognized.clear()
         # self.numOfFaces = len(face_locations)
-
-        print(face_location)
-        face_encodings = face_recognition.face_encodings(rgb_frame, face_location)
         self.recognized.clear()
+
+        face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+
         for face_encoding in face_encodings:
             # See if the face is a match for the known face(s)
             # matches = face_recognition.compare_faces(self.known_face_encodings, face_encoding)
-            self.recognized.clear()
             # get the distances between faces from data to face from the video
             face_distances = face_recognition.face_distance(self.known_face_encodings, face_encoding)
             best_match_index = np.argmin(face_distances)  # best match found
@@ -135,10 +174,11 @@ class FaceDetector():
                 name = 'Unknown'
                 p = 0
             self.recognized.append(name)
-        return name + ' ' + "{:.2f}".format(p)
-            #     self.recognized.append(name + ' ' + "{:.2f}".format(p))
-            # else:
-            #     self.recognized.append('Unknown')
+            print(f'{name} {p * 100}%')
+        face_locations = np.array(face_locations)
+        face_locations = face_locations / self.frame_resizing
+        self.face_locations = face_locations.astype(int)
+        print(self.face_locations)
 
     def fancyDraw(self, img, bbox, l=30, t=5, rt=1):
         x, y, w, h = bbox
@@ -159,78 +199,3 @@ class FaceDetector():
         cv2.line(img, (x1, y1), (x1, y1 - l), (255, 0, 255), t)
         return img
 
-
-# define all the kernels size
-open_kernel = np.ones((5, 5), np.uint8)
-close_kernel = np.ones((7, 7), np.uint8)
-dilation_kernel = np.ones((10, 10), np.uint8)
-
-
-def filter_mask(mask):
-    close_mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, close_kernel)
-    open_mask = cv2.morphologyEx(close_mask, cv2.MORPH_OPEN, open_kernel)
-    dilation = cv2.dilate(open_mask, dilation_kernel, iterations=1)
-
-    return dilation
-
-
-def main():
-    cap = cv2.VideoCapture(0)
-
-    # sfr.save_encoding_images("images/")  #run only once
-
-    print('please show the background now')
-    _, background = cap.read()
-    time.sleep(4)
-    _, background = cap.read()
-    pTime = 0
-    detector = FaceDetector()
-    # sfr.save_encoding_images("images/")  #run only once
-    print('Loading images from database...')
-    detector.load_data()
-    while True:
-        success, img = cap.read()
-
-
-        # cTime = time.time()
-        # fps = 1 / (cTime - pTime)
-        # pTime = cTime
-        # cv2.putText(img, f'FPS: {int(fps)}', (20, 70), cv2.FONT_HERSHEY_PLAIN, 3, (0, 255, 0), 2)
-
-        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
-        # lower bound and upper bound for Green color
-        lower_bound = np.array([50, 80, 50])
-        upper_bound = np.array([90, 255, 255])
-
-        # find the colors within the boundaries
-        mask = cv2.inRange(hsv, lower_bound, upper_bound)
-
-        # Filter mask
-        mask = filter_mask(mask)
-
-        # Apply the mask to take only those region from the saved background
-        # where our cloak is present in the current frame
-        cloak = cv2.bitwise_and(background, background, mask=mask)
-
-        # create inverse mask
-        inverse_mask = cv2.bitwise_not(mask)
-
-        # Apply the inverse mask to take those region of the current frame where cloak is not present
-        current_background = cv2.bitwise_and(img, img, mask=inverse_mask)
-
-        # Combine cloak region and current_background region to get final frame
-        combined = cv2.add(cloak, current_background)
-
-        img, bboxs = detector.findFaces(combined)
-        cv2.imshow("Invisible Cloak", combined)
-        # cv2.imshow("Image", img)
-        if cv2.waitKey(1) == ord('q'):
-            break
-
-    cap.release()
-    cv2.destroyAllWindows()
-
-
-if __name__ == "__main__":
-    main()
