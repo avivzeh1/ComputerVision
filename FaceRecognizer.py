@@ -2,16 +2,10 @@ import glob
 import os
 import cv2
 import face_recognition
-import mediapipe as mp
-import time
 import numpy as np
 
 class FaceReconizer():
-    def __init__(self, minDetectionCon=0.5):
-        self.minDetectionCon = minDetectionCon
-        self.mpFaceDetection = mp.solutions.face_detection
-        self.mpDraw = mp.solutions.drawing_utils
-        self.faceDetection = self.mpFaceDetection.FaceDetection(self.minDetectionCon)
+    def __init__(self):
         self.known_face_encodings = []
         self.known_face_names = []
         self.recognized = []
@@ -19,7 +13,7 @@ class FaceReconizer():
         self.tolerance = 0.6
         self.frame_resizing = 0.25
         self.face_locations = []
-        self.difference = 200
+        self.difference = 240
 
     def load_data(self):
         """
@@ -78,40 +72,27 @@ class FaceReconizer():
         return face_locations.astype(int)
 
     def findFaces(self, img):
-
-        imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        self.results = self.faceDetection.process(imgRGB)
-        bboxs = []
-
         # Find all the faces and face encodings in the current frame of video
         # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
 
         face_locations = self.getFacesLocations(img)
 
-        if self.results.detections:
-            for id, detection in enumerate(self.results.detections):
-                print(self.numOfFaces)
-                bboxC = detection.location_data.relative_bounding_box
-                ih, iw, ic = img.shape
-                bbox = int(bboxC.xmin * iw), int(bboxC.ymin * ih), int(bboxC.width * iw), int(bboxC.height * ih)
-                x, y, w, h = bbox
-                x1, y1 = x + w, y + h
+        for loc in face_locations:
+            print(self.numOfFaces)
 
-                img = self.fancyDraw(img, bbox)
-                bboxs.append([y, x1, y1, x])
+            img = self.fancyDraw(img, loc)
 
-            if self.needToRecognizeAgain(self.sort_locations(self.face_locations), self.sort_locations(face_locations)):
-                self.recognizeFaces(img)
 
-            for bbox in bboxs:
-                name = self.findName(bbox)
-                print(name)
-                print(self.recognized)
-                cv2.putText(img, f'{name} {int(detection.score[0] * 100)}%',
-                            (bbox[3], bbox[0] - 10), cv2.FONT_HERSHEY_PLAIN,
-                            2, (255, 0, 255), 2)
+        if self.needToRecognizeAgain(self.sort_locations(self.face_locations), self.sort_locations(face_locations)):
+            self.recognizeFaces(img)
 
-        return img, bboxs
+        for loc in face_locations:
+            name = self.findName(loc)
+            print(name)
+            print(self.recognized)
+            cv2.putText(img, f'{name}', (loc[3], loc[0] - 10), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 255), 2)
+
+        return img
 
     def findName(self, bbox):
         print('findName', bbox)
@@ -185,35 +166,35 @@ class FaceReconizer():
             # get the distances between faces from data to face from the video
             face_distances = face_recognition.face_distance(self.known_face_encodings, face_encoding)
             best_match_index = np.argmin(face_distances)  # best match found
+
             if face_distances[best_match_index] <= self.tolerance:
                 name = self.known_face_names[best_match_index]  # get the name of this match
-                p = (1 - face_distances[best_match_index]) * 100
+                p = int((1 - face_distances[best_match_index]) * 100)
             else:
                 name = 'Unknown'
                 p = 0
-            self.recognized.append(name)
-            print(f'{name} {p * 100}%')
+            self.recognized.append(name + ' ' + str(p) + '%')
+            print(f'{name} {p}%')
         face_locations = np.array(face_locations)
         face_locations = face_locations / self.frame_resizing
         self.face_locations = face_locations.astype(int)
         print('recognizeFaces', self.face_locations)
 
-    def fancyDraw(self, img, bbox, l=30, t=5, rt=1):
-        x, y, w, h = bbox
-        x1, y1 = x + w, y + h
+    def fancyDraw(self, img, bbox, l=30, t=5):
+        y1, x2, y2, x1 = bbox[0], bbox[1], bbox[2], bbox[3]
 
-        cv2.rectangle(img, (x1, y1), (x, y), (0, 0, 200), 4)
-        # Top Left  x,y
-        cv2.line(img, (x, y), (x + l, y), (255, 0, 255), t)
-        cv2.line(img, (x, y), (x, y + l), (255, 0, 255), t)
+        cv2.rectangle(img, (x1, y1), (x2, y2), (0, 0, 200), 4)
+        #Top Left  x,y
+        cv2.line(img, (x1, y1), (x1 + l, y1), (255, 0, 255), t)
+        cv2.line(img, (x1, y1), (x1, y1 + l), (255, 0, 255), t)
         # Top Right  x1,y
-        cv2.line(img, (x1, y), (x1 - l, y), (255, 0, 255), t)
-        cv2.line(img, (x1, y), (x1, y + l), (255, 0, 255), t)
+        cv2.line(img, (x2, y1), (x2 - l, y1), (255, 0, 255), t)
+        cv2.line(img, (x2, y1), (x2, y1 + l), (255, 0, 255), t)
         # Bottom Left  x,y1
-        cv2.line(img, (x, y1), (x + l, y1), (255, 0, 255), t)
-        cv2.line(img, (x, y1), (x, y1 - l), (255, 0, 255), t)
-        # Bottom Right  x1,y1
-        cv2.line(img, (x1, y1), (x1 - l, y1), (255, 0, 255), t)
-        cv2.line(img, (x1, y1), (x1, y1 - l), (255, 0, 255), t)
+        cv2.line(img, (x2, y2), (x2 - l, y2), (255, 0, 255), t)
+        cv2.line(img, (x2, y2), (x2, y2 - l), (255, 0, 255), t)
+        #Bottom Right  x1,y1
+        cv2.line(img, (x1, y2), (x1 + l, y2), (255, 0, 255), t)
+        cv2.line(img, (x1, y2), (x1, y2 - l), (255, 0, 255), t)
         return img
 

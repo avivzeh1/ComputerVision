@@ -263,7 +263,7 @@ def main():
         # Combine cloak region and current_background region to get final frame
         combined = cv2.add(cloak, current_background)
 
-        img, bboxs = detector.findFaces(combined)
+        img = detector.findFaces(combined)
         cv2.imshow("Invisible Cloak", combined)
 
         if cv2.waitKey(1) == ord('q'):
