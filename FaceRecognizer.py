@@ -12,7 +12,7 @@ class FaceReconizer():
         self.tolerance = 0.6
         self.frame_resizing = 0.35  # resizing the image for faster performance
         self.face_locations = []
-        self.difference = 250  # maximum possible difference between the last recognition to the newest frame
+        self.difference = 210  # maximum possible difference between the last recognition to the newest frame
 
     def load_data(self):
         """
@@ -96,13 +96,12 @@ class FaceReconizer():
             distances.append(np.linalg.norm(v - bbox))
 
         #print('findName', min(distances))
-        if min(distances) > self.difference:  # too far
-            return 'Unknown'
+        # if min(distances) > self.difference:  # too far
+        #     return 'Unknown'
         return self.recognized[np.argmin(distances)]
 
     def sort_locations(self, locations):
         """
-
         :param locations: the vectors to sort
         :return: list of vectors sorted by size of vector
         """
@@ -123,13 +122,15 @@ class FaceReconizer():
 
     def needToRecognizeAgain(self, V, B):
         """
-
         :param V: list of vectors
         :param B: list of vectors
         :return: True if the distance between vi to bi is greater than self.difference
         """
         if len(V) != len(B):
             return True
+
+        if len(V) == 1 and self.recognized[0] != 'Unknown':
+            return False
         # print(V)
         # print(B)
 
@@ -209,5 +210,3 @@ class FaceReconizer():
         self.face_locations.clear()
 
         cv2.imshow("Deciphered image", img)
-
-
