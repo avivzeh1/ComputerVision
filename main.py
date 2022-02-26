@@ -29,8 +29,8 @@ def main():
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1100)
 
     recognizer = FaceReconizer()
-    recognizer.save_encoding_images("images/")  #run only once if there are new images
-    #print('Loading images from database...')
+    #recognizer.save_encoding_images("images/")  #run only once if there are new images
+    print('Loading images from database...')
     recognizer.load_data()
     path = userInteraction()
     if path != 'n':

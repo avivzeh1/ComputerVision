@@ -10,7 +10,7 @@ class FaceReconizer():
         self.known_face_names = []
         self.recognized = []
         self.tolerance = 0.6
-        self.frame_resizing = 0.25  # resizing the image for faster performance
+        self.frame_resizing = 0.35  # resizing the image for faster performance
         self.face_locations = []
         self.difference = 250  # maximum possible difference between the last recognition to the newest frame
 
@@ -74,13 +74,12 @@ class FaceReconizer():
 
         face_locations = self.getFacesLocations(img)
 
-        for loc in face_locations:
-            img = self.fancyDraw(img, loc)
-
         if self.needToRecognizeAgain(self.sort_locations(self.face_locations), self.sort_locations(face_locations)):
             self.recognizeFaces(img)
 
         for loc in face_locations:
+            img = self.fancyDraw(img, loc)
+
             name = self.findName(loc)
             # print(name)
             print(self.recognized)
