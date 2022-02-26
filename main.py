@@ -29,14 +29,14 @@ def main():
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1100)
 
     recognizer = FaceReconizer()
-    #recognizer.save_encoding_images("images/")  #run only once if there are new images
-    print('Loading images from database...')
+    recognizer.save_encoding_images("images/")  #run only once if there are new images
+    #print('Loading images from database...')
     recognizer.load_data()
     path = userInteraction()
     if path != 'n':
         try:
             recognizer.imageRecognizer(path)
-            print('Type q to quit...')
+            print('Type q to quit...close the window for continue to live cam')
             while cv2.waitKey(1) != ord('q'):
                 continue
             return

@@ -12,7 +12,7 @@ class FaceReconizer():
         self.tolerance = 0.6
         self.frame_resizing = 0.25  # resizing the image for faster performance
         self.face_locations = []
-        self.difference = 250
+        self.difference = 250  # maximum possible difference between the last recognition to the newest frame
 
     def load_data(self):
         """
