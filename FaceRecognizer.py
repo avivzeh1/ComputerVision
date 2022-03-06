@@ -210,3 +210,12 @@ class FaceReconizer():
         self.face_locations.clear()
 
         cv2.imshow("Deciphered image", img)
+
+        print('Type q to quit...close the window to continue to live cam')
+        while True:
+            if cv2.waitKey(1) == ord('q'):
+                return 0
+            else:
+                while cv2.getWindowProperty('Deciphered image', 0) < 0:
+                    cv2.destroyAllWindows()
+                    return 1

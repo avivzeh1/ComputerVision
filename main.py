@@ -16,6 +16,7 @@ def filter_mask(mask):
 
     return dilation
 
+
 def userInteraction():
     answer = input('Do you want to decipher an image? if you want to decipher live video choose No Y/N: ')
     if answer.lower() == 'y':
@@ -23,23 +24,22 @@ def userInteraction():
         return answer
     return 'n'
 
+
 def main():
     cap = cv2.VideoCapture(0)
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1100)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1100)
 
     recognizer = FaceReconizer()
-    #recognizer.save_encoding_images("images/")  #run only once if there are new images
+    # recognizer.save_encoding_images("images/")  #run only once if there are new images
     print('Loading images from database...')
     recognizer.load_data()
     path = userInteraction()
     if path != 'n':
         try:
-            recognizer.imageRecognizer(path)
-            print('Type q to quit...close the window for continue to live cam')
-            while cv2.waitKey(1) != ord('q'):
-                continue
-            return
+            ret = recognizer.imageRecognizer(path)
+            if ret == 0:
+                return
         except:
             print('Image does not exist or path is wrong')
 
@@ -90,6 +90,7 @@ def main():
 
     cap.release()
     cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     main()
